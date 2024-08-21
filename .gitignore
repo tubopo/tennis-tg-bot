@@ -2,3 +2,4 @@
 .idea
 .run
 .DS_Store
+.env*
