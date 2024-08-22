@@ -24,13 +24,14 @@ jobs:
         uses: docker/setup-buildx-action@v3
       -
         name: Build and deploy image to ghcr.io
-        # if: ${{ github.ref == 'refs/heads/main' }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         env:
             GITHUB_PACKAGE_TOKEN: ${{ secrets.PKG_TOKEN }}
             USERNAME: ${{ github.actor }}
             GIT_SHA: ${{ github.sha}}
             GIT_REF: ${{ github.ref}}
         run: |
+            ref="$(echo ${GITHUB_REF} | cut -d'/' -f3)"
             echo "GITHUB_REF=${GIT_REF}, GITHUB_SHA=${GIT_SHA}, GIT_BRANCH=${ref}"
             echo ${GITHUB_PACKAGE_TOKEN} | docker login ghcr.io -u ${USERNAME} --password-stdin
             docker buildx build --push \
