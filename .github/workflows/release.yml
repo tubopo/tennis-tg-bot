@@ -1,0 +1,41 @@
+name: "Release [tag]"
+on:
+  push:
+    tags:
+      - v*
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      -
+        name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Build and deploy image to ghcr.io
+        if: ${{ github.ref == 'refs/heads/master' }}
+        env:
+            GITHUB_PACKAGE_TOKEN: ${{ secrets.PKG_TOKEN }}
+            USERNAME: ${{ github.actor }}
+            GIT_SHA: ${{ github.sha}}
+            GIT_REF: ${{ github.ref}}
+        run: |
+            echo "GITHUB_REF=${GIT_REF}, GITHUB_SHA=${GIT_SHA}, GIT_BRANCH=${ref}"
+            echo ${GITHUB_PACKAGE_TOKEN} | docker login ghcr.io -u ${USERNAME} --password-stdin
+            docker buildx build --push \
+                --tag ghcr.io/tubopo/tennis-tg-bot:${ref} --tag tubopo/tennis-tg-bot:latest .
+      -
+        name: Create github release
+        uses: ncipollo/release-action@v1
+
