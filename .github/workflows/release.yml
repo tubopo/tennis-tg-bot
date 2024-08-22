@@ -38,4 +38,5 @@ jobs:
       -
         name: Create github release
         uses: ncipollo/release-action@v1
-
+        with:
+            generateReleaseNotes: true
