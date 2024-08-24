@@ -41,7 +41,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
             images: |
-              ghcr.io/${{ github.repository }}
+                ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
       -
         name: Build and push Docker images
         id: push
@@ -58,3 +58,8 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+      -
+          name: Create github release
+          uses: ncipollo/release-action@v1
+          with:
+              generateReleaseNotes: true
