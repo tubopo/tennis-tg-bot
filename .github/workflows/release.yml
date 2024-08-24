@@ -59,7 +59,7 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
       -
-          name: Create github release
-          uses: ncipollo/release-action@v1
-          with:
-              generateReleaseNotes: true
+        name: Create github release
+        uses: ncipollo/release-action@v1
+        with:
+            generateReleaseNotes: true
