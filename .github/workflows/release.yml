@@ -42,6 +42,15 @@ jobs:
             docker buildx build --push \
                 --tag ghcr.io/${IMAGE}:${ref} --tag ${IMAGE}:latest .
       -
+        name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        env:
+          IMAGE: ${{ github.repository }}
+        with:
+          subject-name: ghcr.io/${IMAGE}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+      -
         name: Create github release
         uses: ncipollo/release-action@v1
         with:
