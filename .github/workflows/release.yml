@@ -6,6 +6,12 @@ on:
 
 jobs:
   release:
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
     runs-on: ubuntu-latest
     steps:
       -
@@ -24,16 +30,17 @@ jobs:
         name: Build and deploy image to ghcr.io
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         env:
-            GITHUB_PACKAGE_TOKEN: ${{ secrets.PKG_TOKEN }}
+            GITHUB_PACKAGE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             USERNAME: ${{ github.actor }}
             GIT_SHA: ${{ github.sha}}
             GIT_REF: ${{ github.ref}}
+            IMAGE: ${{ github.repository }}
         run: |
             ref="$(echo ${GITHUB_REF} | cut -d'/' -f3)"
             echo "GITHUB_REF=${GIT_REF}, GITHUB_SHA=${GIT_SHA}, GIT_BRANCH=${ref}"
             echo ${GITHUB_PACKAGE_TOKEN} | docker login ghcr.io -u ${USERNAME} --password-stdin
             docker buildx build --push \
-                --tag ghcr.io/tubopo/tennis-tg-bot:${ref} --tag tubopo/tennis-tg-bot:latest .
+                --tag ghcr.io/${IMAGE}:${ref} --tag ${IMAGE}:latest .
       -
         name: Create github release
         uses: ncipollo/release-action@v1
