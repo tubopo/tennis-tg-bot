@@ -8,14 +8,27 @@
 
 ```mermaid
 ---
-       title: Trainning schedule user flow
+ title: Training schedule - create
 ---
-flowchart TD
-    start([Записаться на тернировку])
-    start-->date[Выбрать дату]
-    start-->place[Выбрать зал]
+flowchart LR
+ appointment([Записаться на тернировку])
+ appointment-->date[Выбрать дату]
+ appointment-->place[Выбрать зал]
 
-    date--"`Avalible Time Slots`"-->calendar[place, dd-mm-yy, hh:mm]
+ date--"`Available Time Slots`"-->calendar[place, dd-mm-yy, hh:mm]
 
-    place-->date
+ place-->date
+```
+
+```mermaid
+---
+ title: Training schedule - view
+---
+
+flowchart LR
+ view([Просмотреть тренировки])
+ view-->date[Выбрать дату]
+ date-->calendar[place, dd-mm-yy, hh:mm]
+ calendar-->participants[Участники]
+
 ```
