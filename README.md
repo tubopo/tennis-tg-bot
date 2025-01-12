@@ -10,14 +10,20 @@
 ---
  title: Training schedule - create
 ---
-flowchart LR
- appointment([Записаться на тернировку])
- appointment-->date[Выбрать дату]
- appointment-->place[Выбрать зал]
-
- date--"`Available Time Slots`"-->calendar[place, dd-mm-yy, hh:mm]
-
- place-->date
+graph TD
+    A[Start] --> B{User Command}
+    B -->|/start| C[Welcome Message]
+    B -->|/new_training| D[Send Place Selection]
+    D --> E{User Selects Place}
+    E -->|Смолячкова, 9| F[Show Time Slots for Смолячкова, 9]
+    E -->|Ленина, 27| G[Show Time Slots for Ленина, 27]
+    F --> H{User Selects Time Slot}
+    G --> H
+    H -->|Уровень 1| I[Confirm Training Level 1]
+    H -->|Уровень 2| J[Confirm Training Level 2]
+    I --> K[End]
+    J --> K
+    C --> K
 ```
 
 ```mermaid
@@ -26,9 +32,8 @@ flowchart LR
 ---
 
 flowchart LR
- view([Просмотреть тренировки])
- view-->date[Выбрать дату]
- date-->calendar[place, dd-mm-yy, hh:mm]
- calendar-->participants[Участники]
-
+ view([View Training])
+ view --> date[Select date]
+ date --> calendar[place, dd-mm-yy, hh:mm]
+ calendar --> participants[View Participants]
 ```

@@ -3,3 +3,5 @@
 .run
 .DS_Store
 .env*
+# ignore bin
+tennis-tg-bot
