@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  tennis-tg-bot:
+    image: ghcr.io/tubopo/tennis-tg-bot:${TAG:-latest}
+    container_name: tennis-tg-bot
+    environment:
+      - TG_BOT_TOKEN=${TG_BOT_TOKEN}
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
