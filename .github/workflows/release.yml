@@ -6,6 +6,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  PLATFORMS: linux/amd64,linux/arm/v7,linux/arm64
 
 jobs:
   release:
@@ -48,6 +49,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          platforms: ${{ env.PLATFORMS }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
