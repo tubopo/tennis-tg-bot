@@ -4,7 +4,7 @@ RUN apk add --no-cache build-base
 WORKDIR /app
 COPY . /app
 RUN go mod download
-RUN go build .
+RUN GOOS=linux GOARCH=$TARGETARCH go build -o tennis-tg-bot .
 
 # Release
 FROM alpine:latest
