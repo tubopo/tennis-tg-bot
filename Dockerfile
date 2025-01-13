@@ -3,6 +3,7 @@ FROM --platform=$BUILDPLATFORM golang:1.23.0-alpine AS builder
 RUN apk add --no-cache build-base
 WORKDIR /app
 COPY . /app
+ARG TARGETARCH
 RUN go mod download
 RUN GOOS=linux GOARCH=$TARGETARCH go build -o tennis-tg-bot .
 
