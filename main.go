@@ -7,20 +7,29 @@ import (
 	"strings"
 	"time"
 
+	"math/rand"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type Training struct {
-	Date  time.Time
-	Place string
-	Level string
+	Date        time.Time
+	Place       string
+	Level       string
+	Participant string
+}
+
+type UserState struct {
+	State           string
+	CurrentTraining *Training
 }
 
 var (
-	bot          *tgbotapi.BotAPI
-	trainings    []Training
-	userState    map[int64]string
-	userTraining map[int64]*Training
+	bot *tgbotapi.BotAPI
+	// storage for the confirmed trainings
+	trainings map[int64]Training
+	// registration state for the current user, might not be completed
+	userStates map[int64]*UserState
 )
 
 func main() {
@@ -44,8 +53,8 @@ func main() {
 
 	updates := bot.GetUpdatesChan(u)
 
-	userState = make(map[int64]string)
-	userTraining = make(map[int64]*Training)
+	trainings = make(map[int64]Training)
+	userStates = make(map[int64]*UserState)
 
 	for update := range updates {
 		if update.Message != nil {
@@ -63,9 +72,13 @@ func handleMessage(message *tgbotapi.Message) {
 	case "start":
 		sendMessage(chatID, "Welcome! Use /new_training to schedule a new training.")
 	case "new_training":
-		userState[chatID] = "awaiting_place"
-		userTraining[chatID] = &Training{}
+		userStates[chatID] = &UserState{
+			State:           "awaiting_place",
+			CurrentTraining: &Training{}, // init empty training
+		}
 		sendPlaceSelection(chatID)
+	case "view_trainings":
+		viewTrainings(chatID)
 	default:
 		sendMessage(chatID, "I'm not sure what you mean. Use /new_training to schedule a new training.")
 	}
@@ -76,10 +89,16 @@ func handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 	messageID := query.Message.MessageID
 	data := query.Data
 
-	switch userState[chatID] {
+	userState, exists := userStates[chatID]
+	if !exists {
+		log.Printf("No user state for user %d", chatID)
+		return
+	}
+
+	switch userState.State {
 	case "awaiting_place":
-		userTraining[chatID].Place = data
-		userState[chatID] = "awaiting_time"
+		userState.CurrentTraining.Place = data
+		userState.State = "awaiting_time"
 		editMessage(chatID, messageID, fmt.Sprintf("You selected: %s", data))
 		showAvailableTimeSlots(chatID)
 
@@ -92,8 +111,7 @@ func handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 		level := parts[0]
 		timeSlot := parts[1]
 
-		training := userTraining[chatID]
-		training.Level = level
+		userState.CurrentTraining.Level = level
 		timeRange := strings.Split(timeSlot, "-")
 		startTime, _ := time.Parse("15:04", timeRange[0])
 
@@ -103,9 +121,9 @@ func handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 			startTime.Hour(), startTime.Minute(), 0, 0, trainingDate.Location(),
 		)
 
-		userTraining[chatID].Date = trainingDateTime
+		userState.CurrentTraining.Date = trainingDateTime
 		editMessage(chatID, messageID, fmt.Sprintf("You selected: %s (%s)", timeSlot, level))
-		confirmTraining(chatID, userTraining[chatID])
+		confirmTraining(chatID)
 	}
 
 	// Answer the callback query
@@ -128,15 +146,49 @@ func sendPlaceSelection(chatID int64) {
 	bot.Send(msg)
 }
 
+func viewTrainings(chatID int64) {
+	if len(trainings) == 0 {
+		sendMessage(chatID, "No trainings scheduled yet.")
+		return
+	}
+
+	groupedTrainings := make(map[string]map[string][]string)
+	for _, training := range trainings {
+		if groupedTrainings[training.Place] == nil {
+			groupedTrainings[training.Place] = make(map[string][]string)
+		}
+		timeSlot := training.Date.Format("02-01-2006 15:04")
+		groupedTrainings[training.Place][timeSlot] = append(groupedTrainings[training.Place][timeSlot], training.Participant)
+	}
+
+	var message strings.Builder
+	for place, timeSlots := range groupedTrainings {
+		message.WriteString(fmt.Sprintf("📍 %s:\n", place))
+		for timeSlot, participants := range timeSlots {
+			message.WriteString(fmt.Sprintf("  🕒 %s:\n", timeSlot))
+			for _, participant := range participants {
+				message.WriteString(fmt.Sprintf("    + %s\n", participant))
+			}
+		}
+		message.WriteString("\n")
+	}
+
+	sendMessage(chatID, message.String())
+}
+
 func showAvailableTimeSlots(chatID int64) {
-	training := userTraining[chatID]
+	userState, exists := userStates[chatID]
+	if !exists || userState.CurrentTraining == nil {
+		log.Printf("No current training for user %d", chatID)
+		return
+	}
 
 	currentDate := time.Now().Local()
 	dayOfWeek := currentDate.Weekday()
 
 	var keyboardRows [][]tgbotapi.InlineKeyboardButton
 
-	if training.Place == "Смолячкова, 9" {
+	if userState.CurrentTraining.Place == "Смолячкова, 9" {
 		if dayOfWeek == time.Tuesday || dayOfWeek == time.Wednesday || dayOfWeek == time.Thursday {
 			keyboardRows = append(keyboardRows,
 				tgbotapi.NewInlineKeyboardRow(
@@ -151,7 +203,7 @@ func showAvailableTimeSlots(chatID int64) {
 				),
 			)
 		}
-	} else if training.Place == "Ленина, 27" {
+	} else if userState.CurrentTraining.Place == "Ленина, 27" {
 		if dayOfWeek == time.Tuesday || dayOfWeek == time.Thursday {
 			keyboardRows = append(keyboardRows,
 				tgbotapi.NewInlineKeyboardRow(
@@ -168,23 +220,37 @@ func showAvailableTimeSlots(chatID int64) {
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(keyboardRows...)
 
-	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Select a time slot for %s at %s:", currentDate.Format("02-01-2006"), training.Place))
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Select a time slot for %s at %s:", currentDate.Format("02-01-2006"), userState.CurrentTraining.Place))
 	msg.ReplyMarkup = keyboard
 	bot.Send(msg)
 
-	userState[chatID] = "awaiting_time"
-	userTraining[chatID].Date = currentDate
+	userState.State = "awaiting_time"
 }
 
-func confirmTraining(chatID int64, training *Training) {
-	msg := fmt.Sprintf("Training confirmed:\nPlace: %s\nLevel: %s\nDate and Time: %s",
-		training.Place, training.Level, training.Date.Format("02-01-2006 15:04"))
+func confirmTraining(chatID int64) {
+	userState, exists := userStates[chatID]
+	if !exists || userState.CurrentTraining == nil {
+		log.Printf("No current training for user %d", chatID)
+		return
+	}
+
+	user, err := bot.GetChat(tgbotapi.ChatInfoConfig{ChatConfig: tgbotapi.ChatConfig{ChatID: chatID}})
+	if err != nil {
+		log.Printf("Error getting user info: %v", err)
+		return
+	}
+
+	userState.CurrentTraining.Participant = getDisplayName(user)
+
+	trainings[chatID] = *userState.CurrentTraining // Add or update the training
+
+	msg := fmt.Sprintf("Training registration confirmed:\nPlace: %s\nLevel: %s\nDate and Time: %s\nParticipant: %s",
+		userState.CurrentTraining.Place, userState.CurrentTraining.Level,
+		userState.CurrentTraining.Date.Format("02-01-2006 15:04"), userState.CurrentTraining.Participant)
+
 	sendMessage(chatID, msg)
 
-	trainings = append(trainings, *training)
-
-	delete(userState, chatID)
-	delete(userTraining, chatID)
+	delete(userStates, chatID)
 }
 
 func sendMessage(chatID int64, text string) {
@@ -202,4 +268,40 @@ func editMessage(chatID int64, messageID int, text string) {
 	if _, err := bot.Send(editMsg); err != nil {
 		log.Printf("Error editing message: %v", err)
 	}
+}
+
+var userNameCache = make(map[int64]string)
+
+func getDisplayName(user tgbotapi.Chat) string {
+	if name, exists := userNameCache[user.ID]; exists {
+		return name
+	}
+
+	var displayName string
+	if user.FirstName != "" && user.LastName != "" {
+		displayName = fmt.Sprintf("%s %s", user.FirstName, user.LastName)
+	} else if user.FirstName != "" {
+		displayName = user.FirstName
+	} else if user.UserName != "" {
+		displayName = user.UserName
+	} else {
+		displayName = generateRandomName()
+	}
+
+	userNameCache[user.ID] = displayName
+	return displayName
+}
+
+var colors = []string{
+	"Red", "Blue", "Green", "Yellow", "Purple", "Orange", "Pink", "Brown", "Gray", "Cyan",
+}
+
+var animals = []string{
+	"Elephant", "Tiger", "Lion", "Giraffe", "Zebra", "Kangaroo", "Penguin", "Dolphin", "Koala", "Panda",
+}
+
+func generateRandomName() string {
+	color := colors[rand.Intn(len(colors))]
+	animal := animals[rand.Intn(len(animals))]
+	return fmt.Sprintf("Unknown%s%s", color, animal)
 }
