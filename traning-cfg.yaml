@@ -1,0 +1,17 @@
+places:
+  - name: "Смолячкова, 9"
+    levels:
+      - name: "Уровень 1"
+        time_slots:
+          - time: "20:40-22:10"
+            days: [Tuesday, Wednesday, Thursday]
+      - name: "Уровень 2"
+        time_slots:
+          - time: "19:00-20:30"
+            days: [Monday, Tuesday, Wednesday, Thursday, Friday]
+  - name: "Ленина, 27"
+    levels:
+      - name: "Уровень 2"
+        time_slots:
+          - time: "19:00-20:30"
+            days: [Tuesday, Thursday]
