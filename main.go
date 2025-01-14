@@ -171,7 +171,7 @@ func viewTrainings(chatID int64) {
 		for timeSlot, participants := range timeSlots {
 			message.WriteString(fmt.Sprintf("  %s %s:\n", translations.Get("date_time"), timeSlot))
 			for _, participant := range participants {
-				message.WriteString(fmt.Sprintf("    - %s %s\n", translations.Get("participant"), participant))
+				message.WriteString(fmt.Sprintf("    + %s %s\n", translations.Get("participant"), participant))
 			}
 		}
 		message.WriteString("\n")
