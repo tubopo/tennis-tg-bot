@@ -22,6 +22,7 @@ type Training struct {
 }
 
 type UserState struct {
+	UserID          int64
 	State           string
 	CurrentTraining *Training
 }
@@ -75,6 +76,7 @@ func handleMessage(message *tgbotapi.Message) {
 		sendMessage(chatID, "welcome")
 	case "new_training":
 		userStates[chatID] = &UserState{
+			UserID:          message.From.ID,
 			State:           "awaiting_place",
 			CurrentTraining: &Training{},
 		}
@@ -248,15 +250,15 @@ func confirmTraining(chatID int64) {
 		return
 	}
 
-	user, err := bot.GetChat(tgbotapi.ChatInfoConfig{ChatConfig: tgbotapi.ChatConfig{ChatID: chatID}})
+	chatMember, err := bot.GetChatMember(tgbotapi.GetChatMemberConfig{ChatConfigWithUser: tgbotapi.ChatConfigWithUser{ChatID: chatID, UserID: userState.UserID}})
 	if err != nil {
 		sendMessage(chatID, "error_getting_user")
 		return
 	}
 
-	userState.CurrentTraining.Participant = getDisplayName(user)
+	userState.CurrentTraining.Participant = getDisplayName(*chatMember.User)
 
-	trainings[chatID] = *userState.CurrentTraining
+	trainings[userState.UserID] = *userState.CurrentTraining
 
 	message := fmt.Sprintf("%s\n\n%s %s\n%s %s\n%s %s\n%s %s",
 		translations.Get("training_confirmed"),
@@ -293,7 +295,7 @@ func editMessage(chatID int64, messageID int, text string) {
 
 var userNameCache = make(map[int64]string)
 
-func getDisplayName(user tgbotapi.Chat) string {
+func getDisplayName(user tgbotapi.User) string {
 	if name, exists := userNameCache[user.ID]; exists {
 		return name
 	}
