@@ -63,7 +63,10 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
       -
-        name: Create github release
-        uses: ncipollo/release-action@v1
+        name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
         with:
-            generateReleaseNotes: true
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
