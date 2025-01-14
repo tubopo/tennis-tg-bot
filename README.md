@@ -12,6 +12,7 @@ Welcome to the coolest way to schedule your tennis training sessions! This bot i
 - 🕰️ Pick a time slot that fits your busy "pro athlete" schedule
 - 🏆 Select your skill level (we won't judge, promise!)
 - 📅 Automatically schedules for the current date (because who plans ahead anyway?)
+- 👥 View all scheduled trainings
 
 ## 🏓 How It Works
 
@@ -20,24 +21,23 @@ Here's a flowchart to show you how this bot operates. It's almost as smooth as y
 ```mermaid
 graph TD
     A[Start] --> B{User Command}
-    B -->|/start| C[Welcome Message]
+    B -->|/start| C[Send Welcome Message]
     B -->|/new_training| D[Send Place Selection]
-    D --> E{User Selects Place}
-    E -->|Смолячкова, 9| F[Show Time Slots for Смолячкова, 9]
-    E -->|Ленина, 27| G[Show Time Slots for Ленина, 27]
-    F --> H{User Selects Time Slot}
-    G --> H
-    H -->|Уровень 1| I[Confirm Training Level 1]
-    H -->|Уровень 2| J[Confirm Training Level 2]
-    I --> K[End]
-    J --> K
-    C --> K
+    B -->|/view_trainings| E[Show Grouped Trainings]
+    D --> F{User Selects Place}
+    F --> G[Show Available Time Slots]
+    G --> H{User Selects Time Slot}
+    H --> I[Confirm Training]
+    I --> J[End]
+    E --> J
+    C --> J
 ```
 
 ## 🎮 Commands
 
 - `/start` - Wake up the bot (it's always ready, unlike some of us before coffee)
 - `/new_training` - Start scheduling your next victory... err, training session
+- `/view_trainings` - View all scheduled training sessions
 
 ## 🤖 Try It Out
 
