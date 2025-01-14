@@ -9,6 +9,8 @@ import (
 
 	"math/rand"
 
+	"github.com/tubopo/tennis-tg-bot/translations"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -70,17 +72,17 @@ func handleMessage(message *tgbotapi.Message) {
 
 	switch message.Command() {
 	case "start":
-		sendMessage(chatID, "Welcome! Use /new_training to schedule a new training.")
+		sendMessage(chatID, "welcome")
 	case "new_training":
 		userStates[chatID] = &UserState{
 			State:           "awaiting_place",
-			CurrentTraining: &Training{}, // init empty training
+			CurrentTraining: &Training{},
 		}
 		sendPlaceSelection(chatID)
 	case "view_trainings":
 		viewTrainings(chatID)
 	default:
-		sendMessage(chatID, "I'm not sure what you mean. Use /new_training to schedule a new training.")
+		sendMessage(chatID, "unknown_command")
 	}
 }
 
@@ -136,19 +138,19 @@ func handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 func sendPlaceSelection(chatID int64) {
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Смолячкова, 9", "Смолячкова, 9"),
-			tgbotapi.NewInlineKeyboardButtonData("Ленина, 27", "Ленина, 27"),
+			tgbotapi.NewInlineKeyboardButtonData(translations.Get("btn_place_1"), translations.Get("btn_place_1")),
+			tgbotapi.NewInlineKeyboardButtonData(translations.Get("btn_place_2"), translations.Get("btn_place_2")),
 		),
 	)
 
-	msg := tgbotapi.NewMessage(chatID, "Please select a place for the training:")
+	msg := tgbotapi.NewMessage(chatID, translations.Get("select_place"))
 	msg.ReplyMarkup = keyboard
 	bot.Send(msg)
 }
 
 func viewTrainings(chatID int64) {
 	if len(trainings) == 0 {
-		sendMessage(chatID, "No trainings scheduled yet.")
+		sendMessage(chatID, "no_trainings")
 		return
 	}
 
@@ -157,17 +159,19 @@ func viewTrainings(chatID int64) {
 		if groupedTrainings[training.Place] == nil {
 			groupedTrainings[training.Place] = make(map[string][]string)
 		}
-		timeSlot := training.Date.Format("02-01-2006 15:04")
+		timeSlot := training.Date.Format("02.01.2006 15:04")
 		groupedTrainings[training.Place][timeSlot] = append(groupedTrainings[training.Place][timeSlot], training.Participant)
 	}
 
 	var message strings.Builder
+	message.WriteString(translations.Get("view_trainings_header") + "\n\n")
+
 	for place, timeSlots := range groupedTrainings {
-		message.WriteString(fmt.Sprintf("📍 %s:\n", place))
+		message.WriteString(fmt.Sprintf("%s %s:\n", translations.Get("place"), place))
 		for timeSlot, participants := range timeSlots {
-			message.WriteString(fmt.Sprintf("  🕒 %s:\n", timeSlot))
+			message.WriteString(fmt.Sprintf("  %s %s:\n", translations.Get("date_time"), timeSlot))
 			for _, participant := range participants {
-				message.WriteString(fmt.Sprintf("    + %s\n", participant))
+				message.WriteString(fmt.Sprintf("    - %s %s\n", translations.Get("participant"), participant))
 			}
 		}
 		message.WriteString("\n")
@@ -188,39 +192,49 @@ func showAvailableTimeSlots(chatID int64) {
 
 	var keyboardRows [][]tgbotapi.InlineKeyboardButton
 
-	if userState.CurrentTraining.Place == "Смолячкова, 9" {
+	if userState.CurrentTraining.Place == translations.Get("btn_place_1") {
 		if dayOfWeek == time.Tuesday || dayOfWeek == time.Wednesday || dayOfWeek == time.Thursday {
 			keyboardRows = append(keyboardRows,
 				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData("Уровень 1: 20:40-22:10", "Уровень 1|20:40-22:10"),
+					tgbotapi.NewInlineKeyboardButtonData(
+						fmt.Sprintf("%s: 20:40-22:10", translations.Get("btn_level_1")),
+						fmt.Sprintf("%s|20:40-22:10", translations.Get("btn_level_1")),
+					),
 				),
 			)
 		}
 		if dayOfWeek >= time.Monday && dayOfWeek <= time.Friday {
 			keyboardRows = append(keyboardRows,
 				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData("Уровень 2: 19:00-20:30", "Уровень 2|19:00-20:30"),
+					tgbotapi.NewInlineKeyboardButtonData(
+						fmt.Sprintf("%s: 19:00-20:30", translations.Get("btn_level_2")),
+						fmt.Sprintf("%s|19:00-20:30", translations.Get("btn_level_2")),
+					),
 				),
 			)
 		}
-	} else if userState.CurrentTraining.Place == "Ленина, 27" {
+	} else if userState.CurrentTraining.Place == translations.Get("btn_place_2") {
 		if dayOfWeek == time.Tuesday || dayOfWeek == time.Thursday {
 			keyboardRows = append(keyboardRows,
 				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData("Уровень 2: 19:00-20:30", "Уровень 2|19:00-20:30"),
+					tgbotapi.NewInlineKeyboardButtonData(
+						fmt.Sprintf("%s: 19:00-20:30", translations.Get("btn_level_2")),
+						fmt.Sprintf("%s|19:00-20:30", translations.Get("btn_level_2")),
+					),
 				),
 			)
 		}
 	}
 
 	if len(keyboardRows) == 0 {
-		sendMessage(chatID, "No time slots available for the selected place and day. Please try another day.")
+		sendMessage(chatID, "no_time_slots")
 		return
 	}
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(keyboardRows...)
 
-	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Select a time slot for %s at %s:", currentDate.Format("02-01-2006"), userState.CurrentTraining.Place))
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(translations.Get("select_time_slot"),
+		currentDate.Format("02.01.2006"), userState.CurrentTraining.Place))
 	msg.ReplyMarkup = keyboard
 	bot.Send(msg)
 
@@ -236,24 +250,31 @@ func confirmTraining(chatID int64) {
 
 	user, err := bot.GetChat(tgbotapi.ChatInfoConfig{ChatConfig: tgbotapi.ChatConfig{ChatID: chatID}})
 	if err != nil {
-		log.Printf("Error getting user info: %v", err)
+		sendMessage(chatID, "error_getting_user")
 		return
 	}
 
 	userState.CurrentTraining.Participant = getDisplayName(user)
 
-	trainings[chatID] = *userState.CurrentTraining // Add or update the training
+	trainings[chatID] = *userState.CurrentTraining
 
-	msg := fmt.Sprintf("Training registration confirmed:\nPlace: %s\nLevel: %s\nDate and Time: %s\nParticipant: %s",
-		userState.CurrentTraining.Place, userState.CurrentTraining.Level,
-		userState.CurrentTraining.Date.Format("02-01-2006 15:04"), userState.CurrentTraining.Participant)
+	message := fmt.Sprintf("%s\n\n%s %s\n%s %s\n%s %s\n%s %s",
+		translations.Get("training_confirmed"),
+		translations.Get("place"), userState.CurrentTraining.Place,
+		translations.Get("level"), userState.CurrentTraining.Level,
+		translations.Get("date_time"), userState.CurrentTraining.Date.Format("02.01.2006 15:04"),
+		translations.Get("participant"), userState.CurrentTraining.Participant)
 
-	sendMessage(chatID, msg)
+	sendMessage(chatID, message)
 
 	delete(userStates, chatID)
 }
 
-func sendMessage(chatID int64, text string) {
+func sendMessage(chatID int64, key string, args ...interface{}) {
+	text := translations.Get(key)
+	if len(args) > 0 {
+		text = fmt.Sprintf(text, args...)
+	}
 	msg := tgbotapi.NewMessage(chatID, text)
 	if _, err := bot.Send(msg); err != nil {
 		log.Printf("Error sending message: %v", err)
