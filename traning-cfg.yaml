@@ -5,13 +5,16 @@ places:
         time_slots:
           - time: "20:40-22:10"
             days: [Tuesday, Wednesday, Thursday]
+            participants: 8
       - name: "Уровень 2"
         time_slots:
           - time: "19:00-20:30"
             days: [Monday, Tuesday, Wednesday, Thursday, Friday]
+            participants: 8
   - name: "Ленина, 27"
     levels:
       - name: "Уровень 2"
         time_slots:
           - time: "19:00-20:30"
             days: [Tuesday, Thursday]
+            participants: 8
