@@ -103,7 +103,7 @@ func handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 	case "awaiting_place":
 		userState.CurrentTraining.Place = data
 		userState.State = "awaiting_time"
-		editMessage(chatID, messageID, fmt.Sprintf("You selected: %s", data))
+		editMessage(chatID, messageID, "selected_opt_1", data)
 		showAvailableTimeSlots(chatID)
 
 	case "awaiting_time":
@@ -126,7 +126,7 @@ func handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 		)
 
 		userState.CurrentTraining.Date = trainingDateTime
-		editMessage(chatID, messageID, fmt.Sprintf("You selected: %s (%s)", timeSlot, level))
+		editMessage(chatID, messageID, "selected_opt_2", timeSlot, level)
 		confirmTraining(chatID)
 	}
 
@@ -283,7 +283,11 @@ func sendMessage(chatID int64, key string, args ...interface{}) {
 	}
 }
 
-func editMessage(chatID int64, messageID int, text string) {
+func editMessage(chatID int64, messageID int, key string, args ...interface{}) {
+	text := translations.Get(key)
+	if len(args) > 0 {
+		text = fmt.Sprintf(text, args...)
+	}
 	editMsg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 	editMsg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{},
